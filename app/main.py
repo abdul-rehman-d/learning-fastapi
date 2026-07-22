@@ -1,14 +1,25 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 
-class Hero(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
+class HeroBase(SQLModel):
     name: str = Field(index=True)
     secret_name: str
     age: int | None = Field(default=None, index=True)
+
+
+class Hero(HeroBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+
+
+class HeroCreate(HeroBase):
+    pass
+
+
+class HeroPublic(HeroBase):
+    id: int
 
 
 sqlite_file_name = "database.db"
@@ -36,20 +47,29 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/heroes", response_model=list[Hero])
+@app.get("/heroes", response_model=list[HeroPublic])
 def read_heroes(q: str | None = None):
     with Session(engine) as session:
         statement = select(Hero)
         if q:
             statement = statement.where(Hero.name == q)
-        heroes = session.exec(statement).all()
-        return {"heroes": heroes}
+        return session.exec(statement).all()
 
 
-@app.post("/heroes", response_model=Hero)
-def create_hero(hero: Hero):
+@app.post("/heroes", response_model=HeroPublic)
+def create_hero(hero: HeroCreate):
     with Session(engine) as session:
-        session.add(hero)
+        db_hero = Hero.model_validate(hero)
+        session.add(db_hero)
         session.commit()
-        session.refresh(hero)
+        session.refresh(db_hero)
+        return db_hero
+
+
+@app.get("/heroes/{hero_id}", response_model=HeroPublic)
+def read_hero(hero_id: int):
+    with Session(engine) as session:
+        hero = session.get(Hero, hero_id)
+        if not hero:
+            raise HTTPException(status_code=404, detail="Hero not found")
         return hero
