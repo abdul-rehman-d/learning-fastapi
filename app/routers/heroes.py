@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.models.hero import Hero, HeroCreate, HeroPublic, HeroUpdate
+from app.models import Hero, HeroCreate, HeroPublic, HeroPublicWithTeam, HeroUpdate
 
 
 router = APIRouter(prefix="/heroes", tags=["heroes"])
@@ -47,7 +47,7 @@ def update_hero(
     return db_hero
 
 
-@router.get("/{hero_id}", response_model=HeroPublic)
+@router.get("/{hero_id}", response_model=HeroPublicWithTeam)
 def read_hero(*, session: Session = Depends(get_session), hero_id: int):
     hero = session.get(Hero, hero_id)
     if not hero:
