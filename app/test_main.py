@@ -1,11 +1,12 @@
-from app.models import Hero
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from .main import app
+from app.models import Hero
+
 from .database import get_session
+from .main import app
 
 
 @pytest.fixture(name="session")
