@@ -1,24 +1,46 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.models.hero import Hero, HeroCreate, HeroPublic
+from app.models.hero import Hero, HeroCreate, HeroPublic, HeroUpdate
 
 
 router = APIRouter(prefix="/heroes", tags=["heroes"])
 
 
 @router.get("", response_model=list[HeroPublic])
-def read_heroes(*, session: Session = Depends(get_session), q: str | None = None):
+def read_heroes(
+    *,
+    session: Session = Depends(get_session),
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = Query(default=100, le=100),
+):
     statement = select(Hero)
     if q:
         statement = statement.where(Hero.name == q)
-    return session.exec(statement).all()
+    heroes = session.exec(statement.offset(offset).limit(limit)).all()
+    return heroes
 
 
 @router.post("", response_model=HeroPublic)
 def create_hero(*, session: Session = Depends(get_session), hero: HeroCreate):
     db_hero = Hero.model_validate(hero)
+    session.add(db_hero)
+    session.commit()
+    session.refresh(db_hero)
+    return db_hero
+
+
+@router.put("/{hero_id}", response_model=HeroPublic)
+def update_hero(
+    *, session: Session = Depends(get_session), hero_id: int, hero: HeroUpdate
+):
+    db_hero = session.get(Hero, hero_id)
+    if not db_hero:
+        raise HTTPException(status_code=404, detail="Hero not found")
+    hero_data = hero.model_dump(exclude_unset=True)
+    db_hero.sqlmodel_update(hero_data)
     session.add(db_hero)
     session.commit()
     session.refresh(db_hero)
@@ -31,3 +53,13 @@ def read_hero(*, session: Session = Depends(get_session), hero_id: int):
     if not hero:
         raise HTTPException(status_code=404, detail="Hero not found")
     return hero
+
+
+@router.delete("/{hero_id}", response_model=dict)
+def delete_hero(*, session: Session = Depends(get_session), hero_id: int):
+    hero = session.get(Hero, hero_id)
+    if not hero:
+        raise HTTPException(status_code=404, detail="Hero not found")
+    session.delete(hero)
+    session.commit()
+    return {"ok": True}
