@@ -31,3 +31,12 @@ ignore = [
     "S106",    # Test fixture data can look like hardcoded secrets.
     "PLR2004", # Literal status codes/lengths are readable in small tests.
 ]
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+reportUnknownArgumentType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportMissingParameterType = false
+reportMissingTypeArgument = false
