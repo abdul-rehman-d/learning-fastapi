@@ -32,7 +32,7 @@ def create_hero(*, session: Session = Depends(get_session), hero: HeroCreate):
     return db_hero
 
 
-@router.put("/{hero_id}", response_model=HeroPublic)
+@router.patch("/{hero_id}", response_model=HeroPublic)
 def update_hero(
     *, session: Session = Depends(get_session), hero_id: int, hero: HeroUpdate
 ):
